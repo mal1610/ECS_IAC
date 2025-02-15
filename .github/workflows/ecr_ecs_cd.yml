@@ -1,0 +1,11 @@
+name: ECS-CD
+
+on: 
+  workflow_dispatch
+
+jobs:
+  job1:
+    runs-on: ubuntu-latest  
+    steps:
+      - name: send greeting
+        run: echo "Hello, world!"
