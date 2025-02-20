@@ -3,7 +3,7 @@ name: ECS-build
 on: 
   push:
     branches:
-      - master
+      - main
 
 jobs:
   ECS-build:
