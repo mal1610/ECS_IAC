@@ -2,6 +2,50 @@ locals {
   prefix = "malcolm"
 }
 
+resource "aws_security_group" "sg_subnet_2" {
+  name        = "malcolm_ecs_sg_subnet_2"
+  description = "security group for ECS"
+  vpc_id      = module.vpc.vpc_id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "sg_subnet_2_ingress" {
+  security_group_id = aws_security_group.sg_subnet_2.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 80
+  ip_protocol       = "tcp"
+  to_port           = 80
+}
+
+resource "aws_vpc_security_group_egress_rule" "sg_subnet_2_egress" {
+  security_group_id = aws_security_group.sg_subnet_2.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port = 80
+  to_port = 80
+  ip_protocol = "tcp"
+}
+
+resource "aws_security_group" "sg_subnet_1" {
+  name        = "malcolm_ecs_sg_subnet_1"
+  description = "security group for ECS"
+  vpc_id      = module.vpc.vpc_id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "sg_subnet_1_ingress" {
+  security_group_id = aws_security_group.sg_subnet_1.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 80
+  ip_protocol       = "tcp"
+  to_port           = 80
+}
+
+resource "aws_vpc_security_group_egress_rule" "sg_subnet_1_egress" {
+  security_group_id = aws_security_group.sg_subnet_1.id
+  from_port = 80
+  to_port = 80
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol = "tcp"
+}
+
 module "vpc" {
   source = "terraform-aws-modules/vpc/aws"
 
@@ -13,9 +57,9 @@ module "vpc" {
   public_subnets  = ["10.0.101.0/24", "10.0.102.0/24"]
 
   enable_nat_gateway = true
-  enable_vpn_gateway = true
-
+  enable_vpn_gateway = false
 }
+
 
 resource "aws_ecr_repository" "ecr" {
   name         = "${local.prefix}-ecr"
@@ -36,11 +80,11 @@ module "ecs" {
   }
 
   services = {
-    YOUR-TASKDEFINITION-NAME = { #task definition and service name -> #Change
+    malcolm_taskdef = { #task definition and service name -> #Change
       cpu    = 512
       memory = 1024
       container_definitions = {
-        YOUR-CONTAINER-NAME = { #container name -> Change
+        malcolm_flask_app = { #container name -> Change
           essential = true
           image     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/${local.prefix}-ecr:latest"
           port_mappings = [
@@ -53,8 +97,8 @@ module "ecs" {
       }
       assign_public_ip                   = true
       deployment_minimum_healthy_percent = 100
-      subnet_ids                   = [] #List of subnet IDs to use for your tasks
-      security_group_ids           = [] #Create a SG resource and pass it here
+      subnet_ids                   = [module.vpc.public_subnet_objects[0].id, module.vpc.public_subnet_objects[1].id ] #List of subnet IDs to use for your tasks
+      security_group_ids           = [aws_security_group.sg_subnet_1.id, aws_security_group.sg_subnet_2.id] #Create a SG resource and pass it here
     }
   }
 }
